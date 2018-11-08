@@ -1,0 +1,16 @@
+
+[[constraint]]
+  name = "github.com/gin-gonic/gin"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/gin-contrib/cors"
+  branch = "master"
+
+[[constraint]] 
+  name = "github.com/gorilla/websocket"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  branch = "master"
