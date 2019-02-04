@@ -5,9 +5,8 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"time"
+	"os"
 )
-
 
 // TODO: keep and return recent chat history for channel
 
@@ -20,14 +19,12 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-
+	opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		panic(err)
+	}
 	// Create redis client
-	client := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
-		Password: "",
-		DB:       0,
-	})
-
+	client := redis.NewClient(opt)
 	// Subscribe to channel
 	pubsub := client.Subscribe(ChannelName)
 	ch := pubsub.Channel()
@@ -41,32 +38,32 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 	go messageReader(conn, wmc)
 
 	for {
-
 		select {
 		case pub := <-ch:
-			conn.WriteMessage(websocket.TextMessage, []byte(pub.Payload))
+			err := conn.WriteMessage(websocket.TextMessage, []byte(pub.Payload))
+			if err != nil {
+				panic(err)
+			}
 		case received := <-wmc:
 			if received.err != nil {
 				panic(err)
 			}
-			now := time.Now()
-			newMsg := fmt.Sprintf("%d-%d-%d: %s", now.Hour(), now.Minute(), now.Second(), received.msg)
+			newMsg := fmt.Sprintf("%s", received.msg)
 			client.Append(ChannelName, newMsg)
 			val := client.Get(ChannelName)
 			fmt.Println(val)
 			client.Publish(ChannelName, string(newMsg))
 		}
 	}
-
 }
 
 type webSocketMessage struct {
 	msgType int
-	msg []byte
-	err error
+	msg     []byte
+	err     error
 }
 
-func messageReader(conn *websocket.Conn, ch chan *webSocketMessage ) {
+func messageReader(conn *websocket.Conn, ch chan *webSocketMessage) {
 	for {
 		t, msg, err := conn.ReadMessage()
 		m := &webSocketMessage{t, msg, err}
@@ -76,6 +73,3 @@ func messageReader(conn *websocket.Conn, ch chan *webSocketMessage ) {
 		ch <- m
 	}
 }
-
-
-
