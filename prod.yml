@@ -3,6 +3,21 @@ services:
   web:
     build: .
     ports:
-    - "8080:8080"
+      - "8080:8080"
+    networks:
+      - redis-net
+    depends_on:
+      - redis
   redis:
     image: "redis:alpine"
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
+    networks:
+      - redis-net
+    volumes:
+      - redis-data:/data
+networks:
+  redis-net:
+
+volumes:
+  redis-data:
